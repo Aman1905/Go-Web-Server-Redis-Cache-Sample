@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -29,4 +30,28 @@ func getData(w http.ResponseWriter, r *http.Request)  {
 	fmt.Fprintf(w, "Hello fellow DevRel's")
 
 	// code to fetch the data
+	cacheKey := "api-data-cache"
+
+	// check if cache key exists in Redis instance
+	cachedData, err := redisClient.Get(ctxBg, cacheKey).Result()
+
+	// error handling
+	if err == redis.Nil{
+		// if cache key not found, fetch and store the data in Redis
+		data := "Hello Aman"
+		cacheExpiration := 10*time.Minute
+
+		err := redisClient.Set(ctxBg, cacheKey, data, cacheExpiration).Err()
+
+		if err!=nil {
+			panic(err)
+		}
+
+		fmt.Fprintf(w, data)
+	}else if err!=nil {
+		panic(err)
+	}else {
+		// cache key found, hence return this data
+		fmt.Fprintf(w, cachedData)
+	}
 }
